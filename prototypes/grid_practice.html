@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Grid Practice</title>
+	<style>
+		body {
+			/*position: relative;*/
+			height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.main {
+			position: relative;
+		}
+
+		.box {
+			border: 1px solid pink;
+			position: absolute;
+			width: 50px;
+			height: 50px;
+			line-height: 60px;
+			font-size: 50px;
+		}
+
+	</style>
+</head>
+<body>
+	<div class="main"></div>
+	<script>
+		const rows = 3;
+		const columns = 3;
+
+		let board = new Array(rows);
+		let tile = new Array(rows);
+
+		for ( let i = 0; i < board.length; i++ ) {
+			board[i] = new Array(columns);
+			tile[i] = new Array(columns);
+		}
+
+		function init() {
+			for (let row = 0; row < rows; row++)
+				for (let column = 0; column < columns; column++) {
+					let index = row * columns + column;
+					tile[row][column] = document.createElement('div');
+					tile[row][column].className = 'box';
+					tile[row][column].style.top = `${0 + row * 51}px`;
+					tile[row][column].style.left = `${0 + column * 51}px`;
+					tile[row][column].id = index
+					// tile[row][column].innerHTML = '📃'
+					document.querySelector('.main').appendChild(tile[row][column]);
+					board[row][column] = 0;
+				}
+	
+		}
+
+		function checkSquare(x, y) {
+			return board[x][y];
+		}
+
+		function fillSquare(x, y) {
+			tile[x][y].innerHTML = '📦'
+		}
+
+		function needToExpand(size) {
+			return size.filter(x => x > 1).length != 0
+		}
+
+		function expand(obj) {
+			// console.log(obj);
+			let x = obj.coord[0]
+			let y = obj.coord[1]
+			let width = obj.size[0]
+			let depth = obj.size[1]
+			// console.log(obj)
+			for (let yStart = 0; yStart < depth; yStart++){
+				for (let xStart = 0; xStart < width; xStart++) {
+					console.log(xStart, yStart);
+					// fillSquare(xStart, yStart);
+				}
+			}
+		}
+
+		function setSquare(obj) {
+			let x = obj.coord[0]
+			let y = obj.coord[1]
+			if ( checkSquare(x, y) === 0 ) {
+				fillSquare(x, y)
+				if ( needToExpand(obj.size) === true ) {
+					// console.log('expand');
+					expand(obj)
+				}
+			} else {
+				obj.clip = true;
+			}
+		}
+
+		init();
+		
+		let list = [
+			{coord: [0,0], size: [1,1], clip: false},
+			{coord: [1,0], size: [2,2], clip: false},
+			{coord: [0,1], size: [1,2], clip: false},
+			{coord: [2,1], size: [2,1], clip: false}	
+		]
+
+		// list.forEach( obj => {
+		// 	setSquare(obj)
+		// });
+
+	</script>
+</body>
+</html>
