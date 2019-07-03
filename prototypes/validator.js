@@ -35,14 +35,16 @@ function validateBox(obj) {
 		for (let x = 0; (x < width && keep_going === true); x++) {
 			for (let z = 0; (z < height && keep_going === true); z++) {
 				keep_going = fillSquare(x + xStart, y + yStart, z + zStart);
+				if (keep_going === false) {
+					return obj
+				}
 			}
 		}
 	}
 }
 
 function fillSquare(x, y, z) {
-	if (spatial3dMap[x][y][z] === 1) {
-		console.log('box is overlapping!!!')		
+	if (spatial3dMap[x][y][z] === 1) {	
 		return false;
 	} else {
 		spatial3dMap[x][y][z] = 1;
