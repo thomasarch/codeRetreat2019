@@ -1,0 +1,236 @@
+<!-- 
+ruby -r webrick -e "s = WEBrick::HTTPServer.new(:Port => 8000, :DocumentRoot => Dir.pwd); trap('INT') { s.shutdown }; s.start" 
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - interactive - voxel painter</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+		<style>
+			body {
+				background-color: #f0f0f0;
+				color: #444;
+			}
+			a {
+				color: #08f;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="info">
+			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - voxel painter - webgl<br>
+			<strong>click</strong>: add voxel, <strong>shift + click</strong>: remove voxel
+			<p>x: <input type="range" min="1" max="5" value="1" id="xSlider"></p>
+			<p>y: <input type="range" min="1" max="5" value="1" id="ySlider"></p>
+			<p>z: <input type="range" min="1" max="5" value="1" id="zSlider"></p>
+		</div>
+
+		<script src="three.js"></script>
+
+		<script src="WebGL.js"></script>
+
+		<script>
+
+			const xSlider = document.querySelector('#xSlider')
+			const ySlider = document.querySelector('#ySlider')
+			const zSlider = document.querySelector('#zSlider')
+
+
+			console.log(xSlider);
+			if ( WEBGL.isWebGLAvailable() === false ) {
+				document.body.appendChild( WEBGL.getWebGLErrorMessage() );
+			}
+			var camera, scene, renderer;
+			var plane, cube;
+			var mouse, raycaster, isShiftDown = false;
+			var rollOverMesh, rollOverMaterial;
+			var cubeGeo, cubeMaterial;
+			var objects = [];
+
+			let box = {
+				x: 50,
+				y: 50,
+				z: 50
+			}
+
+
+			init();
+			render();
+
+			function init() {
+				xSlider.oninput = function() {
+					box.x = this.value * 50
+					cubeGeo = new THREE.BoxBufferGeometry( box.x, box.y, box.z );
+					refreshMesh();
+				}
+
+				ySlider.oninput = function() {
+					box.y = this.value * 50
+					cubeGeo = new THREE.BoxBufferGeometry( box.x, box.y, box.z );
+					refreshMesh();
+				}
+
+				zSlider.oninput = function() {
+					box.z = this.value * 50
+					cubeGeo = new THREE.BoxBufferGeometry( box.x, box.y, box.z );
+					refreshMesh();
+				}
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.set( 600, 600, 800 );
+				camera.lookAt( 0, 0, 0 );
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xf0f0f0 );
+
+
+
+				// roll-over helpers
+				var rollOverGeo = new THREE.BoxBufferGeometry( box.x, box.y, box.z );
+				rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
+				rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+				scene.add( rollOverMesh );
+				
+				// cubes
+				cubeGeo = new THREE.BoxBufferGeometry( box.x, box.y, box.z );
+				cubeMaterial = new THREE.MeshLambertMaterial( { color: 0xfeb74c, map: new THREE.TextureLoader().load( 'textures/square-outline-textured.png' ) } );
+				
+				// grid
+				var gridHelper = new THREE.GridHelper( 500, 10 );
+				scene.add( gridHelper );
+				
+				//
+				raycaster = new THREE.Raycaster();
+				mouse = new THREE.Vector2();
+				var geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
+				geometry.rotateX( - Math.PI / 2 );
+				plane = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { visible: false } ) );
+				scene.add( plane );
+				objects.push( plane );
+				
+				// lights
+				var ambientLight = new THREE.AmbientLight( 0x606060 );
+				scene.add( ambientLight );
+				var directionalLight = new THREE.DirectionalLight( 0xffffff );
+				directionalLight.position.set( 1, 0.75, 0.5 ).normalize();
+				scene.add( directionalLight );
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+				document.addEventListener( 'keydown', onDocumentKeyDown, false );
+				document.addEventListener( 'keyup', onDocumentKeyUp, false );
+				//
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				// setCube( {x: 9, z: 9} );
+				// readLine("1011111101")
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			function onDocumentMouseMove( event ) {
+				// event.preventDefault();
+				mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
+				raycaster.setFromCamera( mouse, camera );
+				var intersects = raycaster.intersectObjects( objects );
+				if ( intersects.length > 0 ) {
+					var intersect = intersects[ 0 ];
+					rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
+					rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
+
+					offsetObject(rollOverMesh);
+				}
+				render();
+			}
+
+			function offsetCoord(num) {
+				return (num * 0.5) - 25
+			}
+
+			function offsetObject(object) {
+				const size = object.geometry.parameters;			
+
+				object.position.setX(object.position.x + offsetCoord(size.width));
+				object.position.setY(object.position.y + offsetCoord(size.height));
+				object.position.setZ(object.position.z + offsetCoord(size.depth));
+			}
+
+			function refreshMesh() {
+				scene.remove( rollOverMesh );
+				rollOverGeo = new THREE.BoxBufferGeometry( box.x, box.y, box.z );
+				rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+				scene.add( rollOverMesh );				
+			}
+
+			function setCube( coords ) {
+				const voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
+				voxel.position.setX( (coords.x * 50) - 225 );
+				voxel.position.setY( 25 );
+				voxel.position.setZ( (coords.z * 50) - 225 );
+				scene.add( voxel );
+				objects.push( voxel );
+
+				render();
+			}
+
+			function readLine( string ) {
+				string.split('').forEach( (number, index) => {
+					(number === "1") ? setCube({x: index, z: 3}) : '';
+				});
+			}
+
+			function onDocumentMouseDown( event ) {
+				// event.preventDefault();
+				mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
+				raycaster.setFromCamera( mouse, camera );
+				var intersects = raycaster.intersectObjects( objects );
+				if ( intersects.length > 0 ) {
+					var intersect = intersects[ 0 ];
+					// delete cube
+					if ( isShiftDown ) {
+						if ( intersect.object !== plane ) {
+							scene.remove( intersect.object );
+							objects.splice( objects.indexOf( intersect.object ), 1 );
+						}
+						// create cube
+					} else {
+						var voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
+						voxel.position.copy( intersect.point ).add( intersect.face.normal );
+						voxel.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
+						console.log(voxel.position)
+
+						offsetObject(voxel);
+						
+						scene.add( voxel );
+						objects.push( voxel );
+					}
+					render();
+				}
+			}
+
+			function onDocumentKeyDown( event ) {
+				switch ( event.keyCode ) {
+					case 16: isShiftDown = true; break;
+				}
+			}
+			function onDocumentKeyUp( event ) {
+				switch ( event.keyCode ) {
+					case 16: isShiftDown = false; break;
+				}
+			}
+			function render() {
+				renderer.render( scene, camera );
+			}
+		</script>
+
+	</body>
+</html>

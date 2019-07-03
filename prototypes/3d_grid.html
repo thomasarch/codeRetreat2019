@@ -3,19 +3,24 @@
 <head>
 	<title>Grid Practice</title>
 	<style>
+		* {
+			font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+		}
+
 		body {
 			/*position: relative;*/
 			height: 100vh;
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			flex-direction: column;
 		}
 
-		.main {
+		.layer {
 			position: relative;
 			width: 250px;
 			height: 250px;
-
+			margin-bottom: 24px;
 		}
 
 		.box {
@@ -36,10 +41,11 @@
 	</style>
 </head>
 <body>
-	<div class="main"></div>
+	<!-- <div class="main"></div> -->
 	<script>
 		const rows = 5;
 		const columns = 5;
+		const slices = 3;
 
 		let colors = [
 			'AliceBlue','AntiqueWhite','Aqua','Aquamarine','Azure','Beige','Bisque','Black','BlanchedAlmond','Blue','BlueViolet','Brown','BurlyWood','CadetBlue','Chartreuse','Chocolate','Coral','CornflowerBlue','Cornsilk','Crimson','Cyan','DarkBlue','DarkCyan','DarkGoldenRod','DarkGray','DarkGrey','DarkGreen','DarkKhaki','DarkMagenta','DarkOliveGreen','DarkOrange','DarkOrchid','DarkRed','DarkSalmon','DarkSeaGreen','DarkSlateBlue','DarkSlateGray','DarkSlateGrey','DarkTurquoise','DarkViolet','DeepPink','DeepSkyBlue','DimGray','DimGrey','DodgerBlue','FireBrick','FloralWhite','ForestGreen','Fuchsia','Gainsboro','GhostWhite','Gold','GoldenRod','Gray','Grey','Green','GreenYellow','HoneyDew','HotPink','IndianRed','Indigo','Ivory','Khaki','Lavender','LavenderBlush','LawnGreen','LemonChiffon','LightBlue','LightCoral','LightCyan','LightGoldenRodYellow','LightGray','LightGrey','LightGreen','LightPink','LightSalmon','LightSeaGreen','LightSkyBlue','LightSlateGray','LightSlateGrey','LightSteelBlue','LightYellow','Lime','LimeGreen','Linen','Magenta','Maroon','MediumAquaMarine','MediumBlue','MediumOrchid','MediumPurple','MediumSeaGreen','MediumSlateBlue','MediumSpringGreen','MediumTurquoise','MediumVioletRed','MidnightBlue','MintCream','MistyRose','Moccasin','NavajoWhite','Navy','OldLace','Olive','OliveDrab','Orange','OrangeRed','Orchid','PaleGoldenRod','PaleGreen','PaleTurquoise','PaleVioletRed','PapayaWhip','PeachPuff','Peru','Pink','Plum','PowderBlue','Purple','RebeccaPurple','Red','RosyBrown','RoyalBlue','SaddleBrown','Salmon','SandyBrown','SeaGreen','SeaShell','Sienna','Silver','SkyBlue','SlateBlue','SlateGray','SlateGrey','Snow','SpringGreen','SteelBlue','Tan','Teal','Thistle','Tomato','Turquoise','Violet','Wheat','White','WhiteSmoke','Yellow','YellowGreen'
@@ -54,44 +60,57 @@
 		}
 
 		colors = shuffle(colors)
-		console.log(colors)
 
 		let board = new Array(columns);
 		let tile = new Array(columns);
-
+		
 		for ( let i = 0; i < board.length; i++ ) {
 			board[i] = new Array(rows);
 			tile[i] = new Array(rows);
+			for ( let s = 0; s < board.length; s++ ) {				
+				board[i][s] = new Array(slices);
+				tile[i][s] = new Array(slices);		
+			}
 		}
+
+		
+		
 
 		function init() {
-			for (let row = 0; row < rows; row++)
-				for (let column = 0; column < columns; column++) {
-					let index = row * columns + column;
-					tile[column][row] = document.createElement('div');
-					tile[column][row].className = 'box';
-					tile[column][row].style.top = `${0 + row * 51}px`;
-					tile[column][row].style.left = `${0 + column * 51}px`;
-					tile[column][row].id = index
-					document.querySelector('.main').appendChild(tile[column][row]);
-					board[row][column] = 0;
-				}
-	
+			for (let slice = 0; slice < slices; slice++) {
+				info = document.createElement('p');
+				info.innerHTML = `layer: ${slice}`
+
+				layer = document.createElement('div');
+				layer.classList.add('layer');
+				document.querySelector('body').appendChild(info);
+				document.querySelector('body').appendChild(layer);
+				for (let row = 0; row < rows; row++) {
+					for (let column = 0; column < columns; column++) {
+						tile[column][row][slice] = document.createElement('div');
+						tile[column][row][slice].className = 'box';
+						tile[column][row][slice].style.top = `${0 + row * 51}px`;
+						tile[column][row][slice].style.left = `${0 + column * 51}px`;
+						layer.appendChild(tile[column][row][slice]);
+						board[row][column][slice] = 0;
+					}
+				}				
+			}
 		}
 
-		function checkSquare(x, y) {
-			return board[x][y];
+		function checkSquare(x, y, z) {
+			return board[x][y][z];
 		}
 
-		function fillSquare(x, y, color) {
-			if (board[x][y] === 1) {
+		function fillSquare(x, y, z, color) {
+			if (board[x][y][z] === 1) {
 				console.log('box is overlapping!!!')
 				return false;
 			} else {
-				tile[x][y].innerHTML = '<p>📦</p>';
-				tile[x][y].style.background = color
-				tile[x][y].style.borderColor = color;
-				board[x][y] = 1;
+				tile[x][y][z].innerHTML = '<p>📦</p>';
+				tile[x][y][z].style.background = color
+				tile[x][y][z].style.borderColor = color;
+				board[x][y][z] = 1;
 				return true;			
 			}
 
@@ -100,8 +119,10 @@
 		function makeBox(obj) {
 			let xStart = obj.coord[0];
 			let yStart = obj.coord[1];
+			let zStart = obj.coord[2];
 			let width = obj.size[0];
 			let depth = obj.size[1];
+			let height = obj.size[2];
 			let color = colors.pop();
 			
 			let keep_going = true
@@ -110,11 +131,12 @@
 				// console.log('in y');
 				for (let x = 0; (x < width && keep_going === true); x++) {
 					// console.log('in x');
-					keep_going = fillSquare(x + xStart, y + yStart, color);
+					for (let z = 0; (z < height && keep_going === true); z++) {
+						keep_going = fillSquare(x + xStart, y + yStart, z + zStart, color);
+					}
 					// console.log(keep_going);
 				}
 			}
-			
 		}
 
 
@@ -126,8 +148,9 @@
 			// {coord: [1,0], size: [2,2], clip: false},
 			// {coord: [0,1], size: [1,2], clip: false},
 			// {coord: [1,2], size: [2,1], clip: false},
-			{coord: [1,1], size: [3,3], clip: false},
-			{coord: [0,0], size: [2,2], clip: false}
+			{coord: [1,1,0], size: [3,3,2], clip: false},
+			{coord: [0,0,0], size: [2,2,1], clip: false},
+			{coord: [4,4,0], size: [1,1,3], clip: false}
 		]
 		
 
